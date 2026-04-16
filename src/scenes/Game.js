@@ -123,6 +123,7 @@ export class Game extends Phaser.Scene {
     // rather than stacking directly above trees.
     const sign = Math.random() < 0.5 ? -1 : 1;
     const drift = sign * Phaser.Math.Between(20, 50);
+    enemy.drift = drift;
     enemy.body.setVelocity(drift, enemy.speed);
     enemy.body.setBounce(0);
     enemy.body.setCollideWorldBounds(true);

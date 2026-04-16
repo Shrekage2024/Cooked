@@ -9,6 +9,7 @@ export class Enemy extends Phaser.Physics.Arcade.Image {
     this.hp = config.hp;
     this.speed = config.speed;
     this.scoreValue = config.score;
+    this.drift = 0;
   }
 
   takeDamage(amount) {
@@ -22,7 +23,7 @@ export class Enemy extends Phaser.Physics.Arcade.Image {
     const angle = Phaser.Math.Angle.Between(fromX, fromY, this.x, this.y);
     this.body.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
     this.scene.time.delayedCall(280, () => {
-      if (this.active) this.body.setVelocity(0, this.speed);
+      if (this.active) this.body.setVelocity(this.drift, this.speed);
     });
   }
 

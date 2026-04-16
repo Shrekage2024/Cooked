@@ -81,6 +81,7 @@ export class Tim {
     const [ox, oy] = offsets[this._facing];
 
     const hb = this._hitboxGroup.create(this.x + ox, this.y + oy, key);
+    hb.setDepth(DEPTH.HITBOX);
     hb.setAlpha(isSlam ? 0.55 : 0.80);
     hb.damage = damage;
     hb.isSlam = isSlam;
