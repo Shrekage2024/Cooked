@@ -24,7 +24,7 @@ export class Enemy extends Phaser.Physics.Arcade.Image {
     const angle = Phaser.Math.Angle.Between(fromX, fromY, this.x, this.y);
     this.body.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force);
     this.scene.time.delayedCall(280, () => {
-      if (this.active) this.body.setVelocityY(this.speed);
+      if (this.active) this.body.setVelocity(0, this.speed);
     });
   }
 

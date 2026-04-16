@@ -114,6 +114,7 @@ export class Game extends Phaser.Scene {
   }
 
   loseLife() {
+    if (this.lives <= 0) return;
     this.lives = Math.max(0, this.lives - 1);
     this.livesText.setText(this.lives > 0 ? '❤️ '.repeat(this.lives).trim() : '💔');
     this.cameras.main.shake(250, 0.012);
@@ -127,6 +128,7 @@ export class Game extends Phaser.Scene {
     if (this._spawnedInWave < this._totalInWave) return;
     if (this.enemies.countActive(true) > 0) return;
 
+    this.addScore(100);
     this._waveComplete = true;
 
     if (this._waveManager.isLastWave) {
@@ -142,6 +144,5 @@ export class Game extends Phaser.Scene {
 
   update() {
     this.tim.update();
-    this._checkWaveComplete();
   }
 }
