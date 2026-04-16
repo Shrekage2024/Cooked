@@ -1,4 +1,5 @@
 import { W, H, HUD_HEIGHT, FLOOR_Y, GEM_X, GEM_Y, DEPTH } from '../constants.js';
+import { Tim } from '../entities/Tim.js';
 
 export class Game extends Phaser.Scene {
   constructor() { super('Game'); }
@@ -9,6 +10,8 @@ export class Game extends Phaser.Scene {
 
     this._buildBackground();
     this._buildGem();
+    this._buildGroups();
+    this._buildTim();
     this._buildHUD();
   }
 
@@ -30,6 +33,15 @@ export class Game extends Phaser.Scene {
     this.gemZone.refreshBody();
   }
 
+  _buildGroups() {
+    this.enemies = this.physics.add.group();
+    this.attackHitboxes = this.physics.add.group();
+  }
+
+  _buildTim() {
+    this.tim = new Tim(this, 460, GEM_Y, this.attackHitboxes);
+  }
+
   _buildHUD() {
     this.livesText = this.add.text(16, 9, '❤️ ❤️ ❤️', {
       fontSize: '18px', fontFamily: 'monospace',
@@ -44,5 +56,7 @@ export class Game extends Phaser.Scene {
     }).setOrigin(1, 0).setDepth(DEPTH.HUD);
   }
 
-  update() {}
+  update() {
+    this.tim.update();
+  }
 }
