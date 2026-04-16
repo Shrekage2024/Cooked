@@ -1,0 +1,17 @@
+export const W = 800;
+export const H = 600;
+export const HUD_HEIGHT = 36;
+export const FLOOR_Y = 520;
+export const GEM_X = 400;
+export const GEM_Y = 490;
+export const SPAWN_Y = 70;
+export const SPEED_TIM = 200;
+export const ATTACK_DAMAGE = 1;
+export const SLAM_DAMAGE = 2;
+export const ATTACK_DURATION = 200;
+export const SLAM_DURATION = 300;
+export const ATTACK_COOLDOWN = 500;
+export const SLAM_COOLDOWN = 1500;
+export const SLAM_KNOCKBACK = 150;
+export const BETWEEN_WAVES_DELAY = 3000;
+export const DEPTH = { BG: 0, GEM: 5, ENEMY: 10, TIM: 20, HITBOX: 30, HUD: 100 };
