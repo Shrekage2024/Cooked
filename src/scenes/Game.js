@@ -5,6 +5,13 @@ import { Brute } from '../entities/Brute.js';
 import { WaveManager } from '../systems/WaveManager.js';
 import { CollisionHandler } from '../systems/CollisionHandler.js';
 
+// Positions for the forest obstacles — scattered across the play area
+const TREE_POSITIONS = [
+  [120, 165], [390, 145], [650, 160],
+  [65, 275],  [250, 265], [470, 280], [680, 270],
+  [155, 385], [360, 395], [600, 380], [730, 390],
+];
+
 export class Game extends Phaser.Scene {
   constructor() { super('Game'); }
 
@@ -17,20 +24,38 @@ export class Game extends Phaser.Scene {
     this._waveComplete = false;
 
     this._buildBackground();
+    this._buildForest();
     this._buildGem();
     this._buildGroups();
     this._buildTim();
     this._collisions = new CollisionHandler(this);
     this._collisions.setup();
+    // Forest colliders added after collision handler (enemies/tim groups exist)
+    this.physics.add.collider(this.enemies, this.trees);
+    this.physics.add.collider(this.tim.sprite, this.trees);
     this._buildHUD();
     this._startWave();
+
+    // Re-focus canvas on click so keyboard never stops working
+    this.input.on('pointerdown', () => this.sys.game.canvas.focus());
   }
 
   _buildBackground() {
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0a0a1a).setDepth(DEPTH.BG);
+    this.add.rectangle(W / 2, H / 2, W, H, 0x0a1a08).setDepth(DEPTH.BG);       // dark forest green
     this.add.rectangle(W / 2, HUD_HEIGHT / 2, W, HUD_HEIGHT, 0x000000, 0.85).setDepth(DEPTH.HUD - 1);
     this.add.rectangle(W / 2, H - 30, W, 60, 0x1a1208).setDepth(DEPTH.BG);
     this.add.rectangle(W / 2, FLOOR_Y, W, 3, 0x6a4a20).setDepth(DEPTH.BG);
+  }
+
+  _buildForest() {
+    this.trees = this.physics.add.staticGroup();
+    TREE_POSITIONS.forEach(([x, y]) => {
+      const tree = this.trees.create(x, y, 'tree');
+      tree.setDepth(DEPTH.ENEMY - 1);
+      // Circle hitbox centred on canopy (radius 13, offset to align with 32×48 texture)
+      tree.body.setCircle(13, 3, 2);
+      tree.refreshBody();
+    });
   }
 
   _buildGem() {
@@ -87,9 +112,20 @@ export class Game extends Phaser.Scene {
 
   _spawnEnemy(type) {
     this._spawnedInWave++;
-    const x = Phaser.Math.Between(28, W - 28);
+    const x = Phaser.Math.Between(40, W - 40);
     const enemy = type === 'brute' ? new Brute(this, x, SPAWN_Y) : new Scout(this, x, SPAWN_Y);
+
+    // enemies.add(enemy, true) creates the physics body AND adds to display list.
+    // Velocity MUST be set after this call — before it, enemy.body is null.
     this.enemies.add(enemy, true);
+
+    // Give each enemy a small random horizontal drift so they weave through the forest
+    // rather than stacking directly above trees.
+    const sign = Math.random() < 0.5 ? -1 : 1;
+    const drift = sign * Phaser.Math.Between(20, 50);
+    enemy.body.setVelocity(drift, enemy.speed);
+    enemy.body.setBounce(0);
+    enemy.body.setCollideWorldBounds(true);
   }
 
   _showWaveBanner(num) {
@@ -97,7 +133,6 @@ export class Game extends Phaser.Scene {
       fontSize: '52px', fontFamily: 'monospace',
       color: '#00ffff', stroke: '#003355', strokeThickness: 5,
     }).setOrigin(0.5).setDepth(DEPTH.HUD);
-
     this.tweens.add({
       targets: t, alpha: 0, y: H / 2 - 80, duration: 1400, ease: 'Power2',
       onComplete: () => t.destroy(),
@@ -109,9 +144,7 @@ export class Game extends Phaser.Scene {
     this.scoreText.setText(`SCORE: ${this.score}`);
   }
 
-  enemyDied() {
-    this._checkWaveComplete();
-  }
+  enemyDied() { this._checkWaveComplete(); }
 
   loseLife() {
     if (this.lives <= 0) return;
@@ -135,7 +168,6 @@ export class Game extends Phaser.Scene {
       this.time.delayedCall(1000, () => this.scene.start('YouWin', { score: this.score }));
       return;
     }
-
     this.time.delayedCall(BETWEEN_WAVES_DELAY, () => {
       this._waveManager.advance();
       this._startWave();

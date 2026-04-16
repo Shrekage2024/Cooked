@@ -3,14 +3,12 @@ import { DEPTH } from '../constants.js';
 export class Enemy extends Phaser.Physics.Arcade.Image {
   constructor(scene, x, y, texture, config) {
     super(scene, x, y, texture);
-    scene.add.existing(this);
-    scene.physics.add.existing(this);
-
+    // Do NOT call scene.add.existing or scene.physics.add.existing here.
+    // The physics group (enemies.add(this, true)) handles both when spawning.
     this.setDepth(DEPTH.ENEMY);
     this.hp = config.hp;
     this.speed = config.speed;
     this.scoreValue = config.score;
-    this.body.setVelocityY(this.speed);
   }
 
   takeDamage(amount) {

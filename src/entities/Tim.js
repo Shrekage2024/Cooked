@@ -81,11 +81,12 @@ export class Tim {
     const [ox, oy] = offsets[this._facing];
 
     const hb = this._hitboxGroup.create(this.x + ox, this.y + oy, key);
-    hb.setAlpha(0);
+    hb.setAlpha(isSlam ? 0.55 : 0.80);
     hb.damage = damage;
     hb.isSlam = isSlam;
     hb.hitEnemies = new Set();
 
+    this.scene.tweens.add({ targets: hb, alpha: 0, duration, ease: 'Power2' });
     this.scene.time.delayedCall(duration, () => { if (hb.active) hb.destroy(); });
   }
 

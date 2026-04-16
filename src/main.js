@@ -10,6 +10,11 @@ new Phaser.Game({
   width: W,
   height: H,
   backgroundColor: '#0a0a1a',
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  },
   physics: { default: 'arcade', arcade: { debug: false } },
+  input: { keyboard: { target: window } },
   scene: [Boot, MainMenu, Game, GameOver, YouWin],
 });
