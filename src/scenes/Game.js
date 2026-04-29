@@ -8,8 +8,8 @@ import { CollisionHandler } from '../systems/CollisionHandler.js';
 // Positions for the forest obstacles — scattered across the play area
 const TREE_POSITIONS = [
   [120, 165], [390, 145], [650, 160],
-  [65, 275],  [250, 265], [470, 280], [680, 270],
-  [155, 385], [360, 395], [600, 380], [730, 390],
+  [65, 275],  [470, 280], [680, 270],
+  [155, 385], [360, 395], [730, 390],
 ];
 
 export class Game extends Phaser.Scene {
@@ -89,6 +89,7 @@ export class Game extends Phaser.Scene {
       targets: this.gem, scaleX: 0.26, scaleY: 0.26,
       duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
+    this.gemCracks = this.add.graphics().setDepth(DEPTH.GEM + 1);
     this.gemZone = this.physics.add.staticImage(GEM_X, GEM_Y - 20, 'gem').setAlpha(0);
     this.gemZone.setDisplaySize(120, 120);
     // Hitbox for the crystal itself
@@ -96,18 +97,68 @@ export class Game extends Phaser.Scene {
     this.gemZone.refreshBody();
   }
 
+  _drawGemCracks(hitCount) {
+    const g = this.gemCracks;
+    g.clear();
+    if (hitCount === 0) return;
+
+    const cx = GEM_X;
+    const cy = GEM_Y - 20;
+
+    // Crack segments: [x1,y1] → [x2,y2] relative to gem center.
+    // First 3 = hit 1, next 3 = hit 2, last 3 = hit 3.
+    const all = [
+      [[-5, -20], [25, 10]],
+      [[-5, -20], [-25, 15]],
+      [[-5, -20], [8, -44]],
+      [[25, 10],  [46, 24]],
+      [[25, 10],  [36, -12]],
+      [[-25, 15], [-42, 32]],
+      [[0,  5],   [44, -28]],
+      [[-25, 15], [-18, 42]],
+      [[8, -44],  [-8, -52]],
+    ];
+    const segments = all.slice(0, hitCount * 3);
+
+    // Dark shadow pass
+    g.lineStyle(2, 0x000000, 0.45);
+    segments.forEach(([[x1, y1], [x2, y2]]) => {
+      g.beginPath();
+      g.moveTo(cx + x1 + 1, cy + y1 + 1);
+      g.lineTo(cx + x2 + 1, cy + y2 + 1);
+      g.strokePath();
+    });
+
+    // White foreground pass
+    g.lineStyle(1.5, 0xffffff, 0.85);
+    segments.forEach(([[x1, y1], [x2, y2]]) => {
+      g.beginPath();
+      g.moveTo(cx + x1, cy + y1);
+      g.lineTo(cx + x2, cy + y2);
+      g.strokePath();
+    });
+  }
+
   _buildGroups() {
     this.enemies = this.physics.add.group();
     this.attackHitboxes = this.physics.add.group();
+    this.laserBolts = this.physics.add.group();
+
+    // Destroy bolts that exit the screen
+    this.physics.world.on('worldbounds', (body) => {
+      if (body.gameObject && this.laserBolts.contains(body.gameObject)) {
+        body.gameObject.destroy();
+      }
+    });
   }
 
   _buildTim() {
-    this.tim = new Tim(this, 460, GEM_Y, this.attackHitboxes);
+    this.tim = new Tim(this, 460, GEM_Y, this.attackHitboxes, this.laserBolts);
   }
 
   _buildHUD() {
-    this.livesText = this.add.text(16, 9, '❤️ ❤️ ❤️', {
-      fontSize: '18px', fontFamily: 'monospace',
+    this.livesText = this.add.text(16, 9, '♥ ♥ ♥', {
+      fontSize: '22px', fontFamily: 'monospace', color: '#ff4444',
     }).setDepth(DEPTH.HUD);
 
     this.waveText = this.add.text(W / 2, 9, 'WAVE 1 / 5', {
@@ -146,7 +197,7 @@ export class Game extends Phaser.Scene {
     this.enemies.add(enemy, true);
     enemy.setupPhysics();
 
-    enemy.body.setCollideWorldBounds(true);
+    // No world bounds — vertical wrapping is handled in Enemy.update(); horizontal is free too
   }
 
   _showWaveBanner(num) {
@@ -171,6 +222,9 @@ export class Game extends Phaser.Scene {
     if (this.lives <= 0) return;
     this.lives = Math.max(0, this.lives - 1);
     this.updateGemHUD();
+    this._drawGemCracks(3 - this.lives);
+    this.gem.setTint(0xff4444);
+    this.time.delayedCall(200, () => this.gem.clearTint());
     this.cameras.main.shake(250, 0.012);
     if (this.lives <= 0) this.gameOver();
   }
@@ -180,7 +234,8 @@ export class Game extends Phaser.Scene {
   }
 
   updatePlayerHealth(hp) {
-    this.livesText.setText(hp > 0 ? '❤️ '.repeat(hp).trim() : '💔');
+    const hearts = Array.from({ length: 3 }, (_, i) => i < hp ? '♥' : '♡').join(' ');
+    this.livesText.setText(hearts);
   }
 
   gameOver() {
