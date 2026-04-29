@@ -4,7 +4,7 @@ export class CollisionHandler {
   constructor(scene) { this.scene = scene; }
 
   setup() {
-    const { physics, enemies, attackHitboxes, gemZone } = this.scene;
+    const { physics, enemies, attackHitboxes, laserBolts, gemZone } = this.scene;
 
     physics.add.overlap(attackHitboxes, enemies, (hitbox, enemy) => {
       if (!hitbox.active || !enemy.active) return;
@@ -12,6 +12,12 @@ export class CollisionHandler {
       hitbox.hitEnemies.add(enemy);
       enemy.takeDamage(hitbox.damage);
       if (hitbox.isSlam) enemy.applyKnockback(hitbox.x, hitbox.y, SLAM_KNOCKBACK);
+    });
+
+    physics.add.overlap(laserBolts, enemies, (bolt, enemy) => {
+      if (!bolt.active || !enemy.active) return;
+      enemy.takeDamage(bolt.damage);
+      bolt.destroy();
     });
 
     physics.add.overlap(enemies, gemZone, (obj1, obj2) => {
