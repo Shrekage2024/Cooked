@@ -1,4 +1,4 @@
-import { DEPTH, GEM_X, GEM_Y, W, H } from '../constants.js';
+import { DEPTH, GEM_X, GEM_Y, W, H, SPAWN_Y, FLOOR_Y } from '../constants.js';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, texture, config) {
@@ -31,6 +31,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     } else {
       this.stop();
       this.setFrame(0);
+    }
+
+    // Wrap back to top if the enemy slips below the play area
+    if (this.state !== 'ESCAPE' && this.y > FLOOR_Y + 40) {
+      this.setPosition(Phaser.Math.Between(40, W - 40), SPAWN_Y);
+      this.body.setVelocity(0, 0);
+      this.state = 'WALK';
     }
 
     if (this.state === 'WALK') {

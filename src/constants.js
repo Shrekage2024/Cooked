@@ -20,3 +20,9 @@ export const LASER_COOLDOWN      = 3000;
 export const LASER_SPEED         = 700;
 export const LASER_BURST_COUNT   = 3;
 export const LASER_BURST_INTERVAL = 100;
+
+export const ORANGE_DAMAGE         = 2;
+export const ORANGE_TINT_DURATION  = 3000;
+export const ORANGE_SPEED          = 220;
+export const ORANGE_DROP_MIN       = 6000;
+export const ORANGE_DROP_MAX       = 14000;

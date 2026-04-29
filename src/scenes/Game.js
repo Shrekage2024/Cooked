@@ -1,4 +1,4 @@
-import { W, H, HUD_HEIGHT, FLOOR_Y, GEM_X, GEM_Y, DEPTH, SPAWN_Y, BETWEEN_WAVES_DELAY } from '../constants.js';
+import { W, H, HUD_HEIGHT, FLOOR_Y, GEM_X, GEM_Y, DEPTH, SPAWN_Y, BETWEEN_WAVES_DELAY, ORANGE_SPEED, ORANGE_DROP_MIN, ORANGE_DROP_MAX } from '../constants.js';
 import { Tim } from '../entities/Tim.js';
 import { Scout } from '../entities/Scout.js';
 import { Brute } from '../entities/Brute.js';
@@ -36,6 +36,7 @@ export class Game extends Phaser.Scene {
     this._buildHUD();
     this._buildRestartButton();
     this._startWave();
+    this._scheduleOrangeDrop();
 
     // Re-focus canvas on click so keyboard never stops working
     this.input.on('pointerdown', () => this.sys.game.canvas.focus());
@@ -143,6 +144,7 @@ export class Game extends Phaser.Scene {
     this.enemies = this.physics.add.group();
     this.attackHitboxes = this.physics.add.group();
     this.laserBolts = this.physics.add.group();
+    this.oranges = this.physics.add.group();
 
     // Destroy bolts that exit the screen
     this.physics.world.on('worldbounds', (body) => {
@@ -274,10 +276,38 @@ export class Game extends Phaser.Scene {
     });
   }
 
+  _scheduleOrangeDrop() {
+    const delay = Phaser.Math.Between(ORANGE_DROP_MIN, ORANGE_DROP_MAX);
+    this.time.delayedCall(delay, () => {
+      this._dropOrange();
+      this._scheduleOrangeDrop();
+    });
+  }
+
+  _dropOrange() {
+    const x = Phaser.Math.Between(40, W - 40);
+    const orange = this.oranges.create(x, HUD_HEIGHT + 10, 'orange');
+    orange.setDisplaySize(40, 40);
+    orange.setDepth(DEPTH.HITBOX);
+    orange.setVelocityY(ORANGE_SPEED);
+    orange.body.setAllowGravity(false);
+    orange.body.setCircle(32); // full 64px texture radius
+
+    this.physics.add.overlap(orange, this.tim.sprite, () => {
+      if (!orange.active) return;
+      orange.destroy();
+      this.tim.takeOrangeDamage();
+      this.cameras.main.shake(180, 0.008);
+    });
+  }
+
   update(time, delta) {
     this.tim.update();
     this.enemies.getChildren().forEach(e => {
         if (e && e.active) e.update(time, delta);
+    });
+    this.oranges.getChildren().forEach(o => {
+      if (o.active && o.y > H + 40) o.destroy();
     });
   }
 }

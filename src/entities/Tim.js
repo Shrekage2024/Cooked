@@ -3,6 +3,7 @@ import {
   ATTACK_COOLDOWN, SLAM_COOLDOWN, ATTACK_DAMAGE, SLAM_DAMAGE,
   ATTACK_DURATION, SLAM_DURATION,
   LASER_DAMAGE, LASER_COOLDOWN, LASER_SPEED, LASER_BURST_COUNT, LASER_BURST_INTERVAL,
+  ORANGE_DAMAGE, ORANGE_TINT_DURATION,
 } from '../constants.js';
 
 export class Tim {
@@ -26,6 +27,9 @@ export class Tim {
     this._keyA = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     this._keyS = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
     this._keySpace = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+    this._orangeActive = false;
+    this._orangeTimer = null;
   }
 
   get x() { return this.sprite.x; }
@@ -172,7 +176,28 @@ export class Tim {
   takeDamage() {
     this.hp = Math.max(0, this.hp - 1);
     this.sprite.setTint(0xff0000);
-    this.scene.time.delayedCall(150, () => { if (this.sprite.active) this.sprite.clearTint(); });
+    this.scene.time.delayedCall(150, () => {
+      if (!this.sprite.active) return;
+      this._orangeActive ? this.sprite.setTint(0xff8800) : this.sprite.clearTint();
+    });
+    this.scene.updatePlayerHealth(this.hp);
+    if (this.hp <= 0) {
+      this.scene.gameOver();
+    }
+  }
+
+  takeOrangeDamage() {
+    this.hp = Math.max(0, this.hp - ORANGE_DAMAGE);
+    this._orangeActive = true;
+    this.sprite.setTint(0xff8800);
+
+    if (this._orangeTimer) this._orangeTimer.remove();
+    this._orangeTimer = this.scene.time.delayedCall(ORANGE_TINT_DURATION, () => {
+      this._orangeActive = false;
+      this._orangeTimer = null;
+      if (this.sprite.active) this.sprite.clearTint();
+    });
+
     this.scene.updatePlayerHealth(this.hp);
     if (this.hp <= 0) {
       this.scene.gameOver();
