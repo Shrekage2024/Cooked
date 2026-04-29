@@ -15,7 +15,7 @@ export class MainMenu extends Phaser.Scene {
       fontSize: '28px', fontFamily: 'monospace', color: '#88aaff',
     }).setOrigin(0.5);
 
-    this.add.image(W / 2, 380, 'tim').setScale(3);
+    this.add.image(W / 2, 380, 'tim').setDisplaySize(120, 120);
 
     const blink = this.add.text(W / 2, 520, 'PRESS SPACE TO START', {
       fontSize: '20px', fontFamily: 'monospace', color: '#ffd700',

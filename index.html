@@ -5,10 +5,16 @@
   <title>TIM: Wave Defense</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+    body { background: #000; height: 100vh; overflow: hidden; }
   </style>
 </head>
 <body>
+  <div id="error-log" style="position: absolute; top: 0; left: 0; z-index: 9999; color: red; background: rgba(0,0,0,0.8); white-space: pre-wrap; font-family: monospace;"></div>
+  <script>
+    window.addEventListener('error', (event) => {
+      document.getElementById('error-log').innerText += event.message + '\n' + (event.error && event.error.stack ? event.error.stack : '') + '\n';
+    });
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>

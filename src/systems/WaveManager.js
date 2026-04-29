@@ -1,9 +1,9 @@
 export const WAVES = [
-  { spawns: [{ type: 'scout', count: 5 }],                              interval: 1200 },
-  { spawns: [{ type: 'scout', count: 7 }],                              interval: 1000 },
-  { spawns: [{ type: 'scout', count: 6 }, { type: 'brute', count: 1 }], interval: 1000 },
-  { spawns: [{ type: 'scout', count: 5 }, { type: 'brute', count: 2 }], interval: 900  },
-  { spawns: [{ type: 'scout', count: 4 }, { type: 'brute', count: 3 }], interval: 800  },
+  { spawns: [{ type: 'scout', count: 6 }],                              interval: 1100 },
+  { spawns: [{ type: 'scout', count: 12 }],                             interval: 900  },
+  { spawns: [{ type: 'scout', count: 10 }, { type: 'brute', count: 2 }], interval: 900  },
+  { spawns: [{ type: 'scout', count: 8 },  { type: 'brute', count: 5 }], interval: 800  },
+  { spawns: [{ type: 'scout', count: 15 }, { type: 'brute', count: 8 }], interval: 700  },
 ];
 
 export class WaveManager {

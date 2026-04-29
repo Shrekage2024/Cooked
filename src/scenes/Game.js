@@ -34,14 +34,34 @@ export class Game extends Phaser.Scene {
     this.physics.add.collider(this.enemies, this.trees);
     this.physics.add.collider(this.tim.sprite, this.trees);
     this._buildHUD();
+    this._buildRestartButton();
     this._startWave();
 
     // Re-focus canvas on click so keyboard never stops working
     this.input.on('pointerdown', () => this.sys.game.canvas.focus());
   }
 
+  _buildRestartButton() {
+    const restartBtn = this.add.text(W / 2, H - 20, 'RESTART GAME', {
+      fontSize: '14px',
+      fontFamily: 'monospace',
+      color: '#aaaaaa',
+      backgroundColor: '#222222',
+      padding: { x: 10, y: 5 }
+    })
+    .setOrigin(0.5, 1)
+    .setInteractive({ useHandCursor: true })
+    .setDepth(DEPTH.HUD);
+
+    restartBtn.on('pointerover', () => restartBtn.setColor('#ffffff').setBackgroundColor('#444444'));
+    restartBtn.on('pointerout', () => restartBtn.setColor('#aaaaaa').setBackgroundColor('#222222'));
+    restartBtn.on('pointerdown', () => {
+      this.scene.start('Boot'); // Restart from boot to reset everything
+    });
+  }
+
   _buildBackground() {
-    this.add.rectangle(W / 2, H / 2, W, H, 0x0a1a08).setDepth(DEPTH.BG);       // dark forest green
+    this.add.image(W / 2, H / 2, 'bg').setDisplaySize(W, H).setDepth(DEPTH.BG);
     this.add.rectangle(W / 2, HUD_HEIGHT / 2, W, HUD_HEIGHT, 0x000000, 0.85).setDepth(DEPTH.HUD - 1);
     this.add.rectangle(W / 2, H - 30, W, 60, 0x1a1208).setDepth(DEPTH.BG);
     this.add.rectangle(W / 2, FLOOR_Y, W, 3, 0x6a4a20).setDepth(DEPTH.BG);
@@ -51,21 +71,28 @@ export class Game extends Phaser.Scene {
     this.trees = this.physics.add.staticGroup();
     TREE_POSITIONS.forEach(([x, y]) => {
       const tree = this.trees.create(x, y, 'tree');
+      tree.setDisplaySize(120, 120);
       tree.setDepth(DEPTH.ENEMY - 1);
-      // Circle hitbox centred on canopy (radius 13, offset to align with 32×48 texture)
-      tree.body.setCircle(13, 3, 2);
+      // Unscaled size is 512x512.
+      // Circular hitbox around the trunk, let's use 180 unscaled radius, offset to the bottom center.
+      tree.body.setCircle(180, 76, 140);
       tree.refreshBody();
     });
   }
 
   _buildGem() {
-    this.gem = this.add.image(GEM_X, GEM_Y, 'gem').setDepth(DEPTH.GEM);
+    // Shift the gem slightly up visually if it touches the bottom bounds of the image
+    this.gem = this.add.image(GEM_X, GEM_Y - 20, 'gem').setDepth(DEPTH.GEM);
+    this.gem.setDisplaySize(120, 120);
+    // Since displaySize is 120, the base scale is ~0.234
     this.tweens.add({
-      targets: this.gem, scaleX: 1.15, scaleY: 1.15,
+      targets: this.gem, scaleX: 0.26, scaleY: 0.26,
       duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
-    this.gemZone = this.physics.add.staticImage(GEM_X, GEM_Y, 'gem').setAlpha(0);
-    this.gemZone.body.setCircle(18);
+    this.gemZone = this.physics.add.staticImage(GEM_X, GEM_Y - 20, 'gem').setAlpha(0);
+    this.gemZone.setDisplaySize(120, 120);
+    // Hitbox for the crystal itself
+    this.gemZone.body.setCircle(200, 56, 112);
     this.gemZone.refreshBody();
   }
 
@@ -116,16 +143,9 @@ export class Game extends Phaser.Scene {
     const enemy = type === 'brute' ? new Brute(this, x, SPAWN_Y) : new Scout(this, x, SPAWN_Y);
 
     // enemies.add(enemy, true) creates the physics body AND adds to display list.
-    // Velocity MUST be set after this call — before it, enemy.body is null.
     this.enemies.add(enemy, true);
+    enemy.setupPhysics();
 
-    // Give each enemy a small random horizontal drift so they weave through the forest
-    // rather than stacking directly above trees.
-    const sign = Math.random() < 0.5 ? -1 : 1;
-    const drift = sign * Phaser.Math.Between(20, 50);
-    enemy.drift = drift;
-    enemy.body.setVelocity(drift, enemy.speed);
-    enemy.body.setBounce(0);
     enemy.body.setCollideWorldBounds(true);
   }
 
@@ -150,11 +170,21 @@ export class Game extends Phaser.Scene {
   loseLife() {
     if (this.lives <= 0) return;
     this.lives = Math.max(0, this.lives - 1);
-    this.livesText.setText(this.lives > 0 ? '❤️ '.repeat(this.lives).trim() : '💔');
+    this.updateGemHUD();
     this.cameras.main.shake(250, 0.012);
-    if (this.lives <= 0) {
-      this.time.delayedCall(500, () => this.scene.start('GameOver'));
-    }
+    if (this.lives <= 0) this.gameOver();
+  }
+
+  updateGemHUD() {
+    this.waveText.setText(`GEMS: ${this.lives} | WAVE ${this._waveManager.current + 1}`);
+  }
+
+  updatePlayerHealth(hp) {
+    this.livesText.setText(hp > 0 ? '❤️ '.repeat(hp).trim() : '💔');
+  }
+
+  gameOver() {
+    this.time.delayedCall(500, () => this.scene.start('GameOver'));
   }
 
   _checkWaveComplete() {
@@ -169,13 +199,30 @@ export class Game extends Phaser.Scene {
       this.time.delayedCall(1000, () => this.scene.start('YouWin', { score: this.score }));
       return;
     }
+    
+    this._showWaveCompleteBanner();
+
     this.time.delayedCall(BETWEEN_WAVES_DELAY, () => {
       this._waveManager.advance();
       this._startWave();
     });
   }
 
-  update() {
+  _showWaveCompleteBanner() {
+    const t = this.add.text(W / 2, H / 2 - 20, 'WAVE COMPLETE!', {
+      fontSize: '52px', fontFamily: 'monospace',
+      color: '#00ff88', stroke: '#003300', strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(DEPTH.HUD);
+    this.tweens.add({
+      targets: t, alpha: 0, y: H / 2 - 80, duration: 1800, ease: 'Power2',
+      onComplete: () => t.destroy(),
+    });
+  }
+
+  update(time, delta) {
     this.tim.update();
+    this.enemies.getChildren().forEach(e => {
+        if (e && e.active) e.update(time, delta);
+    });
   }
 }

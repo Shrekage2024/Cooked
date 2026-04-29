@@ -11,9 +11,14 @@ export class Tim {
     this._facing = 'right';
     this._attackCooldown = 0;
     this._slamCooldown = 0;
+    this.hp = 3;
 
-    this.sprite = scene.physics.add.image(x, y, 'tim').setDepth(DEPTH.TIM);
+    this.sprite = scene.physics.add.sprite(x, y, 'tim').setDepth(DEPTH.TIM);
+    this.sprite.setDisplaySize(120, 120);
     this.sprite.setCollideWorldBounds(true);
+    // 512x512 frame, character is centered. 
+    // Unscaled radius 125, offset 131 so it's centered (131+125 = 256).
+    this.sprite.body.setCircle(125, 131, 131);
 
     this._cursors = scene.input.keyboard.createCursorKeys();
     this._keyA = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
@@ -37,14 +42,22 @@ export class Tim {
     const vy = up.isDown ? -SPEED_TIM : down.isDown ? SPEED_TIM : 0;
     this.sprite.setVelocity(vx, vy);
 
-    if (left.isDown)       this._facing = 'left';
-    else if (right.isDown) this._facing = 'right';
+    if (vx !== 0 || vy !== 0) {
+      this.sprite.body.velocity.normalize().scale(SPEED_TIM);
+      this.sprite.play('tim-walk', true);
+    } else {
+      this.sprite.stop();
+      this.sprite.setFrame(0);
+    }
+
+    if (left.isDown)       { this._facing = 'left'; this.sprite.setFlipX(true); }
+    else if (right.isDown) { this._facing = 'right'; this.sprite.setFlipX(false); }
     else if (up.isDown)    this._facing = 'up';
     else if (down.isDown)  this._facing = 'down';
   }
 
   _clampToPlayArea() {
-    const half = this.sprite.height / 2;
+    const half = this.sprite.displayHeight / 2;
     this.sprite.y = Phaser.Math.Clamp(
       this.sprite.y,
       HUD_HEIGHT + half + 4,
@@ -68,7 +81,7 @@ export class Tim {
 
   _spawnHitbox(type) {
     const isSlam = type === 'slam';
-    const key      = isSlam ? 'hitbox-slam'   : 'hitbox-attack';
+    const key      = 'shockwave';
     const duration = isSlam ? SLAM_DURATION    : ATTACK_DURATION;
     const damage   = isSlam ? SLAM_DAMAGE      : ATTACK_DAMAGE;
 
@@ -82,13 +95,35 @@ export class Tim {
 
     const hb = this._hitboxGroup.create(this.x + ox, this.y + oy, key);
     hb.setDepth(DEPTH.HITBOX);
-    hb.setAlpha(isSlam ? 0.55 : 0.80);
+    
+    const size = isSlam ? 200 : 100;
+    hb.setDisplaySize(size, size);
+    
+    hb.setAlpha(0.9);
     hb.damage = damage;
     hb.isSlam = isSlam;
     hb.hitEnemies = new Set();
 
+    if (isSlam) {
+      hb.body.setCircle(256); // Unscaled radius for 512x512 image
+    } else {
+      hb.body.setSize(512, 512); // Unscaled size for 512x512 image
+    }
+
+    hb.play('shockwave-anim');
+
     this.scene.tweens.add({ targets: hb, alpha: 0, duration, ease: 'Power2' });
     this.scene.time.delayedCall(duration, () => { if (hb.active) hb.destroy(); });
+  }
+
+  takeDamage() {
+    this.hp = Math.max(0, this.hp - 1);
+    this.sprite.setTint(0xff0000);
+    this.scene.time.delayedCall(150, () => { if (this.sprite.active) this.sprite.clearTint(); });
+    this.scene.updatePlayerHealth(this.hp);
+    if (this.hp <= 0) {
+      this.scene.gameOver();
+    }
   }
 
   _tickCooldowns() {
