@@ -8,6 +8,7 @@ export class Boot extends Phaser.Scene {
     this.load.image('bg', 'assets/images/bg.png');
     this.load.image('gem', 'assets/images/gem.png');
     this.load.image('tree', 'assets/images/tree.png');
+    this.load.image('laser-bolt', 'assets/images/laser-bolt.png');
   }
 
   create() {
