@@ -2,27 +2,30 @@ import {
   HUD_HEIGHT, FLOOR_Y, SPEED_TIM, DEPTH,
   ATTACK_COOLDOWN, SLAM_COOLDOWN, ATTACK_DAMAGE, SLAM_DAMAGE,
   ATTACK_DURATION, SLAM_DURATION,
+  LASER_DAMAGE, LASER_COOLDOWN, LASER_SPEED, LASER_BURST_COUNT, LASER_BURST_INTERVAL,
 } from '../constants.js';
 
 export class Tim {
-  constructor(scene, x, y, hitboxGroup) {
+  constructor(scene, x, y, hitboxGroup, laserBolts) {
     this.scene = scene;
     this._hitboxGroup = hitboxGroup;
+    this._laserBolts = laserBolts;
     this._facing = 'right';
     this._attackCooldown = 0;
     this._slamCooldown = 0;
+    this._laserCooldown = 0;
     this.hp = 3;
 
     this.sprite = scene.physics.add.sprite(x, y, 'tim').setDepth(DEPTH.TIM);
-    this.sprite.setDisplaySize(120, 120);
+    this.sprite.setDisplaySize(72, 72);
     this.sprite.setCollideWorldBounds(true);
-    // 512x512 frame, character is centered. 
-    // Unscaled radius 125, offset 131 so it's centered (131+125 = 256).
-    this.sprite.body.setCircle(125, 131, 131);
+    // 512x512 frame — circle radius ~28% of frame, centered at 256.
+    this.sprite.body.setCircle(110, 146, 146);
 
     this._cursors = scene.input.keyboard.createCursorKeys();
     this._keyA = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
     this._keyS = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+    this._keySpace = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
   }
 
   get x() { return this.sprite.x; }
@@ -33,6 +36,7 @@ export class Tim {
     this._clampToPlayArea();
     this._handleAttack();
     this._handleSlam();
+    this._handleLaser();
     this._tickCooldowns();
   }
 
@@ -77,6 +81,55 @@ export class Tim {
     if (!Phaser.Input.Keyboard.JustDown(this._keyS)) return;
     this._slamCooldown = SLAM_COOLDOWN;
     this._spawnHitbox('slam');
+  }
+
+  _handleLaser() {
+    if (this._laserCooldown > 0) return;
+    if (!Phaser.Input.Keyboard.JustDown(this._keySpace)) return;
+    this._laserCooldown = LASER_COOLDOWN + LASER_BURST_INTERVAL * (LASER_BURST_COUNT - 1);
+    this._fireLaserBurst();
+  }
+
+  _fireLaserBurst() {
+    this.scene.time.addEvent({
+      delay: LASER_BURST_INTERVAL,
+      repeat: LASER_BURST_COUNT - 1,
+      callback: () => this._spawnLaserBolt(),
+    });
+  }
+
+  _spawnLaserBolt() {
+    const eyeOffsets = {
+      right: [30, -12],
+      left:  [-30, -12],
+      up:    [8, -30],
+      down:  [-8, 30],
+    };
+    const velocities = {
+      right: [LASER_SPEED, 0],
+      left:  [-LASER_SPEED, 0],
+      up:    [0, -LASER_SPEED],
+      down:  [0, LASER_SPEED],
+    };
+    const angles = { right: 0, left: 180, up: 270, down: 90 };
+
+    const [ox, oy] = eyeOffsets[this._facing];
+    const [vx, vy] = velocities[this._facing];
+
+    const bolt = this.scene.physics.add.image(
+      this.x + ox,
+      this.y + oy,
+      'laser-bolt',
+    );
+    bolt.setDisplaySize(40, 14);
+    bolt.setAngle(angles[this._facing]);
+    bolt.setDepth(DEPTH.HITBOX);
+    bolt.damage = LASER_DAMAGE;
+    bolt.body.setCollideWorldBounds(true);
+    bolt.body.onWorldBounds = true;
+    bolt.setVelocity(vx, vy);
+
+    this._laserBolts.add(bolt);
   }
 
   _spawnHitbox(type) {
@@ -130,5 +183,6 @@ export class Tim {
     const dt = this.scene.game.loop.delta;
     this._attackCooldown = Math.max(0, this._attackCooldown - dt);
     this._slamCooldown   = Math.max(0, this._slamCooldown - dt);
+    this._laserCooldown  = Math.max(0, this._laserCooldown - dt);
   }
 }
